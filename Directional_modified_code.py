@@ -366,6 +366,21 @@ class StrategyDSDirectionalOrb(BaseStrategy):
             open_position = len(self.positions_df_pe) + len(self.positions_df_ce)
             now = datetime.now().time()
             if open_position < self.MAX_POSITION and self.TIME_1 < now <= self.TIME_2 and current_price is not None and current_price <= target_price and self.ADDING_POS:
+               
+                # <----------- Change ----------->
+                 # Fetch latest NIFTY Future 5-min data
+                fut_df = self.nifty_fut_historical()
+                last_row = fut_df.iloc[-1]
+                moving_avg = last_row['MA']
+
+                # Checking condition before adding position for call and put
+                if (ce_or_pe == "call" and last_row['close'] >= moving_avg) or (ce_or_pe == "put" and last_row['close'] <= moving_avg):
+                    print(f"Skipping adding {ce_or_pe} because condition not met.")
+                    logger.info(f"Skipping adding {ce_or_pe} because condition not met.")
+                    return positions_df
+                # <----------- Change ----------->
+
+                
                 nifty_spot_response = self.breeze.get_quotes(
                     stock_code="NIFTY",
                     exchange_code="NSE",
@@ -507,7 +522,7 @@ class StrategyDSDirectionalOrb(BaseStrategy):
                                     moving_avg=olhc.iloc[-1]['MA'] # Change Fetching MA value
                                     print(f"candles_3 :- {candles_3} \n || resistance :- {resistance} || support :- {support} || last_row :- {last_row['close']} || moving_average:{moving_avg}")
 
-                                    if (last_row['close'] > resistance) and (last_row['close']< moving_avg): #Change entry condition for Put
+                                    if (last_row['close'] > resistance) and (last_row['close']>moving_avg): #Change entry condition for Put
                                         self.ATM_STRIKE = round(last_row['close'] / 50) * 50
                                         closest_strike_pe = self.closest_put_otm()
                                         print("Fetching of Closest strike pe done")
@@ -555,7 +570,7 @@ class StrategyDSDirectionalOrb(BaseStrategy):
                                     moving_avg=olhc.iloc[-1]['MA']
                                     print(f"candles_3 :- {candles_3} \n || resistance :- {resistance} || support :- {support} || last_row :- {last_row['close']}|| moving_average:{moving_avg}")
 
-                                    if (last_row['close'] < support) and (last_row['close']> moving_avg): #Change entry condition for Call
+                                    if (last_row['close'] < support) and (last_row['close']< moving_avg): #Change entry condition for Call
                                         self.ATM_STRIKE = round(last_row['close'] / 50) * 50
                                         closest_strike_ce = self.closest_call_otm()
                                         if closest_strike_ce:
